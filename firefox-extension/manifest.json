@@ -1,0 +1,56 @@
+{
+  "manifest_version": 2,
+  "name": "Tab Search",
+  "version": "1.0.0",
+  "description": "Instant tab switching with Ctrl+P — a command-palette for your browser tabs.",
+
+  "permissions": [
+    "tabs",
+    "<all_urls>"
+  ],
+
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+
+  "commands": {
+    "open-tab-search": {
+      "suggested_key": {
+        "default": "Ctrl+P"
+      },
+      "description": "Open Tab Search"
+    }
+  },
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "browser_action": {
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Tab Search"
+  },
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "tab-search@bengtt",
+      "strict_min_version": "91.0"
+    }
+  }
+}
