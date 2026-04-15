@@ -69,8 +69,9 @@ No build step is required — load either directory directly as an unpacked exte
 
 For a permanent install (developer edition or Nightly):
 1. Open `about:config` and set `xpinstall.signatures.required` to `false`
-2. Open `about:addons` → **Extensions** → gear icon → **Install Add-on From File…**
-3. Select `firefox-extension/manifest.json` (or package as a `.xpi` first)
+2. Package the extension as a `.xpi` file (see [Packaging as .xpi](#packaging-as-xpi) below)
+3. Open `about:addons` → **Extensions** → gear icon → **Install Add-on From File…**
+4. Select the generated `tab-search-<version>.xpi`
 
 > **Shortcut note:** Firefox allows the Ctrl+P override but may need manual
 > assignment in `about:addons` → **Manage Extension Shortcuts**.
@@ -142,6 +143,22 @@ For a given `(query, text)` pair, the algorithm:
 4. Awards **exact substring bonus** — if the full query appears as a literal substring.
 
 Results are sorted descending by score; the top 15 are shown.
+
+---
+
+## Packaging as .xpi
+
+A `.xpi` file is simply a ZIP archive of the `firefox-extension/` directory.
+The helper script `scripts/package-firefox.sh` automates this for you.
+
+**Requirements:** `zip` (pre-installed on Linux and macOS).
+
+```bash
+bash scripts/package-firefox.sh
+```
+
+This produces `tab-search-<version>.xpi` in the repository root, ready to be
+installed via **about:addons → Install Add-on From File…**.
 
 ---
 
