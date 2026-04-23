@@ -79,35 +79,49 @@ if (!window.__tabSearchInjected) {
   // Helpers
   // =========================================================================
 
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
   function highlightText(text, indices) {
-    if (!indices || indices.length === 0) return escapeHtml(text);
-    const set = new Set(indices);
-    let html = '';
-    for (let i = 0; i < text.length; i++) {
-      const ch = escapeHtml(text[i]);
-      html += set.has(i) ? `<mark>${ch}</mark>` : ch;
+    const frag = document.createDocumentFragment();
+    if (!indices || indices.length === 0) {
+      frag.appendChild(document.createTextNode(text));
+      return frag;
     }
-    return html;
+    const set = new Set(indices);
+    let i = 0;
+    while (i < text.length) {
+      if (set.has(i)) {
+        const mark = document.createElement('mark');
+        mark.textContent = text[i];
+        frag.appendChild(mark);
+        i++;
+      } else {
+        let j = i;
+        while (j < text.length && !set.has(j)) j++;
+        frag.appendChild(document.createTextNode(text.slice(i, j)));
+        i = j;
+      }
+    }
+    return frag;
   }
 
   function truncate(str, max) {
     return str.length > max ? str.slice(0, max - 1) + '…' : str;
   }
 
-  function faviconHtml(tab) {
+  function faviconEl(tab) {
     const url = tab.favIconUrl;
     if (url && !url.startsWith('moz-extension://') && !url.startsWith('chrome://')) {
-      return `<img class="ts-favicon" src="${escapeHtml(url)}" alt="" onerror="this.style.display='none'">`;
+      const img = document.createElement('img');
+      img.className = 'ts-favicon';
+      img.src = url;
+      img.alt = '';
+      img.addEventListener('error', () => { img.style.display = 'none'; });
+      return img;
     }
-    return `<span class="ts-favicon ts-favicon--fallback" aria-hidden="true">🌐</span>`;
+    const span = document.createElement('span');
+    span.className = 'ts-favicon ts-favicon--fallback';
+    span.setAttribute('aria-hidden', 'true');
+    span.textContent = '🌐';
+    return span;
   }
 
   // =========================================================================
@@ -193,43 +207,63 @@ if (!window.__tabSearchInjected) {
     const shadow = overlayState && overlayState.shadow;
     if (!shadow) return;
 
-    const query   = shadow.querySelector('.ts-input').value;
-    const list    = shadow.querySelector('.ts-list');
+    const query = shadow.querySelector('.ts-input').value;
+    const list  = shadow.querySelector('.ts-list');
 
     results = searchTabs(query, allTabs);
     const visible = results.slice(0, MAX_RESULTS);
 
+    while (list.firstChild) list.removeChild(list.firstChild);
+
     if (visible.length === 0) {
-      list.innerHTML = `<li class="ts-empty">No tabs found</li>`;
+      const empty = document.createElement('li');
+      empty.className = 'ts-empty';
+      empty.textContent = 'No tabs found';
+      list.appendChild(empty);
       return;
     }
 
-    list.innerHTML = visible.map((res, i) => {
+    visible.forEach((res, i) => {
       const { tab, titleIndices, urlIndices } = res;
-      const selected  = i === selectedIdx;
-      const titleHtml = highlightText(truncate(tab.title || '(no title)', 80), titleIndices);
-      const urlHtml   = highlightText(truncate(tab.url   || '', 90), urlIndices);
-      const badge     = tab.active ? `<span class="ts-badge">current</span>` : '';
+      const selected = i === selectedIdx;
 
-      return `
-        <li class="ts-item${selected ? ' ts-item--active' : ''}"
-            role="option" aria-selected="${selected}" data-idx="${i}">
-          ${faviconHtml(tab)}
-          <div class="ts-item-text">
-            <div class="ts-item-title">${titleHtml}</div>
-            <div class="ts-item-url">${urlHtml}</div>
-          </div>
-          ${badge}
-        </li>
-      `;
-    }).join('');
+      const li = document.createElement('li');
+      li.className = 'ts-item' + (selected ? ' ts-item--active' : '');
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-selected', String(selected));
+      li.dataset.idx = String(i);
 
-    list.querySelectorAll('.ts-item').forEach(el => {
-      el.addEventListener('mousedown', (e) => {
+      li.appendChild(faviconEl(tab));
+
+      const itemText = document.createElement('div');
+      itemText.className = 'ts-item-text';
+
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'ts-item-title';
+      titleDiv.appendChild(highlightText(truncate(tab.title || '(no title)', 80), titleIndices));
+
+      const urlDiv = document.createElement('div');
+      urlDiv.className = 'ts-item-url';
+      urlDiv.appendChild(highlightText(truncate(tab.url || '', 90), urlIndices));
+
+      itemText.appendChild(titleDiv);
+      itemText.appendChild(urlDiv);
+      li.appendChild(itemText);
+
+      if (tab.active) {
+        const badge = document.createElement('span');
+        badge.className = 'ts-badge';
+        badge.textContent = 'current';
+        li.appendChild(badge);
+      }
+
+      li.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        selectedIdx = parseInt(el.dataset.idx, 10);
+        selectedIdx = parseInt(li.dataset.idx, 10);
         activateSelected();
       });
+
+      list.appendChild(li);
     });
 
     scrollActiveIntoView(list);
